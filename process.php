@@ -7,7 +7,7 @@ $connections=array();
 
 function searchForClient($id, $array) {
    foreach ($array as $key => $val) {
-       if ($val['client'] === $id) {
+       if ($val['id'] === $id) {
            return $key;
        }
    }
@@ -23,27 +23,33 @@ $allsplitlines=array_filter($allsplitlines, function($var){ if (mb_substr($var[1
 
 foreach ($allsplitlines as $key => $line) {
 	if (mb_substr($line[3],0,8)=="client c"){
-		$connected[]=array("time"=>$allsplitlines[$key][0],"client"=>explode("'",mb_substr($allsplitlines[$key][3],18))[0]);
+		$connected[]=array("time"=>$allsplitlines[$key][0],"client"=>explode("'",mb_substr($allsplitlines[$key][3],18))[0], "id"=>explode(")",mb_substr(explode("'",$allsplitlines[$key][3])[2],4))[0] );
 	}elseif(mb_substr($line[3],0,8)=="client d"){
-		$disconnected[]=array("time"=>$allsplitlines[$key][0],"client"=>explode("'",mb_substr($allsplitlines[$key][3],21))[0]);
-	}
-}
-if (!empty($connected) && !empty($disconnected)){
-	if (!(strtotime($connected[0][0]) < strtotime($disconnected[0][0]))){
-		unset($disconnected[0]);
+		$disconnected[]=array("time"=>$allsplitlines[$key][0],"client"=>explode("'",mb_substr($allsplitlines[$key][3],21))[0], "id"=>explode(")",mb_substr(explode("'",$allsplitlines[$key][3])[2],4))[0] );
 	}
 }
 
-foreach ($connected as $key => $connectedUser) {
+while (!(empty($connected))){
+	foreach ($connected as $key => $connectedUser) {
 	//search
-	$found=searchForClient($connectedUser["client"], $disconnected);
+	$found=searchForClient($connectedUser["id"], $disconnected);
 	//verknüpfen
 	if($found !=null){
-		$connections[]=array("client"=>$connectedUser["client"],"connected"=>$connectedUser["time"],"disconnected"=>$disconnected[$found]["time"]);
+		if (strtotime($connectedUser["time"]) > strtotime($disconnected[$found]["time"])){
+			unset($disconnected[$found]);
+			break;	
+		} 
+
+		$connections[]=array("client"=>$connectedUser["client"],"connected"=>$connectedUser["time"],"disconnected"=>$disconnected[$found]["time"], "id"=>$connectedUser["id"]);
 		unset($disconnected[$found]);
+		unset($connected[$key]);
+	}else{
+		$connections[]=array("client"=>$connectedUser["client"],"connected"=>$connectedUser["time"],"disconnected"=>date("d.m.Y H:i:s"), "id"=>$connectedUser["id"]);
+		unset($connected[$key]);
 	}
 	
 	//unset found
+}
 }
 
 
@@ -51,6 +57,11 @@ foreach ($connected as $key => $connectedUser) {
 //var_dump($disconnected);
 //var_dump($connections);
 $conncounter=0;
+/**var_dump($connections);
+echo "<hr><br><br>";
+var_dump($connected);
+echo "<hr><br><br>";
+var_dump($disconnected);**/
 
 
 
